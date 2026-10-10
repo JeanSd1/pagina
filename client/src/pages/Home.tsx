@@ -36,6 +36,8 @@ export default function Home() {
   const content = normalizeSiteContent(
     contentQuery.data ?? DEFAULT_SITE_CONTENT
   );
+  const heroImageUrl = content.heroImageUrl?.trim();
+  const brandLogoUrl = content.logoUrl?.trim();
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -79,7 +81,16 @@ export default function Home() {
       <header className="site-header">
         <div className="container flex items-center justify-between gap-5">
           <a className="brand-mark" href="#top">
-            <span>{content.brandMark}</span> <b>{content.brandName}</b>
+            {brandLogoUrl ? (
+              <img
+                className="brand-logo"
+                src={brandLogoUrl}
+                alt={`${content.brandName} logo`}
+              />
+            ) : (
+              <span>{content.brandMark}</span>
+            )}
+            <b>{content.brandName}</b>
           </a>
           <nav className={`site-nav ${menuOpen ? "site-nav-open" : ""}`}>
             <a href="#servicos" onClick={closeMenu}>
@@ -150,7 +161,18 @@ export default function Home() {
                 </p>
               </div>
             </div>
-            <div className="hero-panel">
+            <div
+              className="hero-panel"
+              style={
+                heroImageUrl
+                  ? {
+                      backgroundImage: `linear-gradient(rgba(11,18,32,0.75), rgba(11,18,32,0.8)), url(${heroImageUrl})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                    }
+                  : undefined
+              }
+            >
               <div className="panel-noise" />
               <div className="panel-head">
                 <span className="eyebrow text-blue-200">
