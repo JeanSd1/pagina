@@ -1,6 +1,8 @@
 export const DEFAULT_SITE_CONTENT = {
   brandMark: "JD/",
   brandName: "TECH SOLUTIONS",
+  logoUrl: "",
+  heroImageUrl: "",
   ownerName: "Jean Durgante",
   topLine: "atendimento local · orçamento sem compromisso",
   topAction: "ver horários disponíveis",
@@ -94,6 +96,7 @@ export const SITE_CONTENT_FIELDS: {
 }[] = [
   { section: "Marca e contato", key: "brandMark", label: "Símbolo da marca" },
   { section: "Marca e contato", key: "brandName", label: "Nome da marca" },
+  { section: "Marca e contato", key: "logoUrl", label: "Logo da frente (URL ou upload)" },
   {
     section: "Marca e contato",
     key: "ownerName",
@@ -122,6 +125,7 @@ export const SITE_CONTENT_FIELDS: {
   { section: "Apresentação", key: "heroStatus", label: "Disponibilidade" },
   { section: "Apresentação", key: "heroTitle", label: "Título" },
   { section: "Apresentação", key: "heroAccent", label: "Destaque do título" },
+  { section: "Apresentação", key: "heroImageUrl", label: "Imagem principal da capa (URL ou upload)" },
   {
     section: "Apresentação",
     key: "heroDescription",

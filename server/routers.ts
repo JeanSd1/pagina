@@ -12,13 +12,16 @@ import { sendReceipt } from "./receipts";
 const serviceInput = z.object({
   id: z.number().optional(), slug: z.string().min(2).max(120), name: z.string().min(2).max(160), category: z.string().min(2).max(80), description: z.string().min(10), icon: z.string().min(2).max(40), priceFrom: z.number().nonnegative().nullable().optional(), priceMode: z.enum(["fixed", "from", "quote"]), active: z.boolean(),
 });
+const optionalImageKeys = new Set<keyof SiteContent>(["logoUrl", "heroImageUrl"]);
 const siteContentInput = z.custom<SiteContent>(
   (input): input is SiteContent =>
     typeof input === "object" &&
     input !== null &&
     SITE_CONTENT_FIELDS.every(({ key }) => {
       const value = Reflect.get(input, key);
-      return typeof value === "string" && value.trim().length > 0 && value.length <= 5000;
+      if (typeof value !== "string") return false;
+      if (optionalImageKeys.has(key)) return value.length <= 5000;
+      return value.trim().length > 0 && value.length <= 5000;
     }),
   { message: "O conteúdo do site contém campos vazios ou inválidos." },
 );
