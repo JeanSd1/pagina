@@ -18,10 +18,18 @@ export async function createContext(
   const authorization = opts.req.headers.authorization;
   if (authorization?.startsWith("Bearer ")) {
     const supabaseUser = await getSupabaseUser(authorization.slice("Bearer ".length));
+    const adminEmail = ENV.supabaseAdminEmail.trim().toLowerCase();
+    const userEmail = supabaseUser?.email?.trim().toLowerCase();
+    const isAdmin = Boolean(userEmail && adminEmail && userEmail === adminEmail);
+    if (!isAdmin) {
+      console.warn("[Auth] Supabase admin check failed", {
+        supabaseUserFound: Boolean(supabaseUser),
+        hasUserEmail: Boolean(userEmail),
+        hasAdminConfig: Boolean(adminEmail),
+        emailMatches: isAdmin,
+      });
+    }
     if (supabaseUser) {
-      const adminEmail = ENV.supabaseAdminEmail.trim().toLowerCase();
-      const userEmail = supabaseUser.email?.trim().toLowerCase();
-      const isAdmin = Boolean(userEmail && adminEmail && userEmail === adminEmail);
       user = {
         id: 0,
         openId: `supabase:${supabaseUser.id}`,

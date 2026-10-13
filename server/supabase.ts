@@ -5,6 +5,7 @@ import type { SiteContent } from "../shared/siteContent";
 type ServiceInput = { id?: number; slug: string; name: string; category: string; description: string; icon: string; priceFrom?: number | null; priceMode: "fixed" | "from" | "quote"; active: boolean };
 type SlotInput = { id?: number; date: string; time: string; status: "available" | "blocked" | "booked"; note?: string };
 let adminClient: SupabaseClient | null = null;
+let authClient: SupabaseClient | null = null;
 
 export function isSupabaseConfigured() { return Boolean(ENV.supabaseUrl && ENV.supabaseServiceRoleKey); }
 export function getSupabaseAdmin() {
@@ -13,9 +14,11 @@ export function getSupabaseAdmin() {
   return adminClient;
 }
 export async function getSupabaseUser(accessToken: string): Promise<SupabaseUser | null> {
-  const client = getSupabaseAdmin();
-  if (!client) return null;
-  const { data, error } = await client.auth.getUser(accessToken);
+  if (!ENV.supabaseUrl || !ENV.supabaseAnonKey) return null;
+  if (!authClient) {
+    authClient = createClient(ENV.supabaseUrl, ENV.supabaseAnonKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  }
+  const { data, error } = await authClient.auth.getUser(accessToken);
   if (error) return null;
   return data.user;
 }
