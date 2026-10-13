@@ -15,31 +15,33 @@ export async function createContext(
 ): Promise<TrpcContext> {
   let user: User | null = null;
 
-  try {
-    user = await sdk.authenticateRequest(opts.req);
-  } catch (error) {
-    // Authentication is optional for public procedures.
-    user = null;
+  const authorization = opts.req.headers.authorization;
+  if (authorization?.startsWith("Bearer ")) {
+    const supabaseUser = await getSupabaseUser(authorization.slice("Bearer ".length));
+    if (supabaseUser) {
+      const adminEmail = ENV.supabaseAdminEmail.trim().toLowerCase();
+      const userEmail = supabaseUser.email?.trim().toLowerCase();
+      const isAdmin = Boolean(userEmail && adminEmail && userEmail === adminEmail);
+      user = {
+        id: 0,
+        openId: `supabase:${supabaseUser.id}`,
+        name: supabaseUser.user_metadata?.full_name ?? supabaseUser.email ?? "Utilizador Supabase",
+        email: supabaseUser.email ?? null,
+        loginMethod: "supabase",
+        role: isAdmin ? "admin" : "user",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastSignedIn: new Date(),
+      } as User;
+    }
   }
 
   if (!user) {
-    const authorization = opts.req.headers.authorization;
-    if (authorization?.startsWith("Bearer ")) {
-      const supabaseUser = await getSupabaseUser(authorization.slice("Bearer ".length));
-      if (supabaseUser) {
-        const isAdmin = Boolean(supabaseUser.email && ENV.supabaseAdminEmail && supabaseUser.email.toLowerCase() === ENV.supabaseAdminEmail.toLowerCase());
-        user = {
-          id: 0,
-          openId: `supabase:${supabaseUser.id}`,
-          name: supabaseUser.user_metadata?.full_name ?? supabaseUser.email ?? "Utilizador Supabase",
-          email: supabaseUser.email ?? null,
-          loginMethod: "supabase",
-          role: isAdmin ? "admin" : "user",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          lastSignedIn: new Date(),
-        } as User;
-      }
+    try {
+      user = await sdk.authenticateRequest(opts.req);
+    } catch {
+      // Authentication is optional for public procedures.
+      user = null;
     }
   }
 
