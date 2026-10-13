@@ -38,6 +38,7 @@ export default function Home() {
   );
   const heroImageUrl = content.heroImageUrl?.trim();
   const brandLogoUrl = content.logoUrl?.trim();
+  const panelImageUrl = content.panelImageUrl?.trim();
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -183,16 +184,26 @@ export default function Home() {
                 </span>
               </div>
               <div className="panel-main">
-                <div className="panel-orbit">
-                  <div className="orbit-ring orbit-ring-one" />
-                  <div className="orbit-ring orbit-ring-two" />
-                  <div className="orbit-core">
-                    <Code2 size={33} />
+                {panelImageUrl ? (
+                  <div className="panel-image-wrap">
+                    <img
+                      className="panel-image"
+                      src={panelImageUrl}
+                      alt={`${content.brandName} logo`}
+                    />
                   </div>
-                  <span className="orbit-node node-one" />
-                  <span className="orbit-node node-two" />
-                  <span className="orbit-node node-three" />
-                </div>
+                ) : (
+                  <div className="panel-orbit">
+                    <div className="orbit-ring orbit-ring-one" />
+                    <div className="orbit-ring orbit-ring-two" />
+                    <div className="orbit-core">
+                      <Code2 size={33} />
+                    </div>
+                    <span className="orbit-node node-one" />
+                    <span className="orbit-node node-two" />
+                    <span className="orbit-node node-three" />
+                  </div>
+                )}
                 <p className="eyebrow text-blue-200">{content.panelEyebrow}</p>
                 <h2>
                   {content.panelTitle}

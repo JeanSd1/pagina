@@ -22,6 +22,7 @@ export const DEFAULT_SITE_CONTENT = {
   heroProofTitle: "Atendimento versátil",
   heroProofDetail: "do diagnóstico à execução",
   panelCode: "JD / 001",
+  panelImageUrl: "",
   panelEyebrow: "soluções integradas",
   panelTitle: "Um único contato.",
   panelAccent: "Várias frentes.",
@@ -153,6 +154,11 @@ export const SITE_CONTENT_FIELDS: {
     label: "Detalhe do atendimento",
   },
   { section: "Cartão de destaque", key: "panelCode", label: "Identificação" },
+  {
+    section: "Cartão de destaque",
+    key: "panelImageUrl",
+    label: "Logo ou imagem do cartão (PNG/JPG, URL ou upload)",
+  },
   { section: "Cartão de destaque", key: "panelEyebrow", label: "Chamada" },
   { section: "Cartão de destaque", key: "panelTitle", label: "Título" },
   {

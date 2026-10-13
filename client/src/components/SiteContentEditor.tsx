@@ -8,7 +8,11 @@ import {
 import { trpc } from "@/lib/trpc";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
-const IMAGE_FIELD_KEYS = new Set<keyof SiteContent>(["logoUrl", "heroImageUrl"]);
+const IMAGE_FIELD_KEYS = new Set<keyof SiteContent>([
+  "logoUrl",
+  "heroImageUrl",
+  "panelImageUrl",
+]);
 
 export default function SiteContentEditor({
   content,
