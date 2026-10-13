@@ -1,4 +1,5 @@
 export const DEFAULT_SITE_CONTENT = {
+  siteTheme: "light",
   brandMark: "JD/",
   brandName: "TECH SOLUTIONS",
   logoUrl: "",
@@ -95,6 +96,7 @@ export const SITE_CONTENT_FIELDS: {
   label: string;
   multiline?: boolean;
 }[] = [
+  { section: "Aparência", key: "siteTheme", label: "Tema do site" },
   { section: "Marca e contato", key: "brandMark", label: "Símbolo da marca" },
   { section: "Marca e contato", key: "brandName", label: "Nome da marca" },
   { section: "Marca e contato", key: "logoUrl", label: "Logo da frente (URL ou upload)" },
@@ -321,6 +323,9 @@ export function normalizeSiteContent(value: unknown): SiteContent {
     DEFAULT_SITE_CONTENT
   ) as (keyof SiteContent)[]) {
     const candidate = Reflect.get(source, key);
+    if (key === "siteTheme" && candidate !== "light" && candidate !== "dark") {
+      continue;
+    }
     if (typeof candidate === "string") content[key] = candidate;
   }
   return content;

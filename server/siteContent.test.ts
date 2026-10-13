@@ -25,4 +25,9 @@ describe("site content settings", () => {
       brandName: "Minha empresa",
     });
   });
+
+  it("accepts only the supported site themes", () => {
+    expect(normalizeSiteContent({ siteTheme: "dark" }).siteTheme).toBe("dark");
+    expect(normalizeSiteContent({ siteTheme: "neon" }).siteTheme).toBe("light");
+  });
 });

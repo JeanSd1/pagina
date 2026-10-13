@@ -42,6 +42,10 @@ export function ThemeProvider({
     }
   }, [theme, switchable]);
 
+  useEffect(() => {
+    if (!switchable) setTheme(defaultTheme);
+  }, [defaultTheme, switchable]);
+
   const toggleTheme = switchable
     ? () => {
         setTheme(prev => (prev === "light" ? "dark" : "light"));

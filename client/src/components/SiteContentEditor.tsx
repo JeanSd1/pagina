@@ -25,8 +25,10 @@ export default function SiteContentEditor({
   const [initialized, setInitialized] = useState(false);
   const [uploadingField, setUploadingField] = useState<keyof SiteContent | null>(null);
   const [uploadError, setUploadError] = useState("");
+  const utils = trpc.useUtils();
   const saveContent = trpc.admin.saveSiteContent.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      await utils.siteContent.get.invalidate();
       onSaved();
     },
   });
@@ -164,6 +166,14 @@ export default function SiteContentEditor({
                           )}
                         </div>
                       </div>
+                    ) : field.key === "siteTheme" ? (
+                      <select
+                        value={form.siteTheme}
+                        onChange={event => updateField("siteTheme", event.target.value)}
+                      >
+                        <option value="light">Claro</option>
+                        <option value="dark">Escuro</option>
+                      </select>
                     ) : field.multiline ? (
                       <textarea
                         required

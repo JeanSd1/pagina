@@ -24,6 +24,7 @@ const siteContentInput = z.custom<SiteContent>(
     SITE_CONTENT_FIELDS.every(({ key }) => {
       const value = Reflect.get(input, key);
       if (typeof value !== "string") return false;
+      if (key === "siteTheme" && value !== "light" && value !== "dark") return false;
       if (optionalImageKeys.has(key)) return value.length <= 5000;
       return value.trim().length > 0 && value.length <= 5000;
     }),
