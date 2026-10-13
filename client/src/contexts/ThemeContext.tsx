@@ -31,16 +31,15 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
+    const activeTheme = switchable ? theme : defaultTheme;
+
+    root.classList.toggle("dark", activeTheme === "dark");
+    root.setAttribute("data-theme", activeTheme);
 
     if (switchable) {
-      localStorage.setItem("theme", theme);
+      localStorage.setItem("theme", activeTheme);
     }
-  }, [theme, switchable]);
+  }, [defaultTheme, switchable, theme]);
 
   useEffect(() => {
     if (!switchable) setTheme(defaultTheme);

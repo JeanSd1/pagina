@@ -8,6 +8,19 @@ import { sbCreateBooking, sbCreateQuote, sbGetSiteContent, sbListBookings, sbLis
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+function getMissingWritableBackendError() {
+  const missing: string[] = [];
+  if (!ENV.supabaseUrl) missing.push("SUPABASE_URL");
+  if (!ENV.supabaseServiceRoleKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+  if (!process.env.DATABASE_URL) missing.push("DATABASE_URL");
+
+  if (!missing.length) return null;
+
+  return new Error(
+    `Configuração de banco ausente no servidor. Defina as variáveis ${missing.join(", ")} antes de salvar conteúdo. Para o Supabase, use a chave secreta do servidor (SUPABASE_SERVICE_ROLE_KEY), não a chave pública/anônima.`
+  );
+}
+
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try { _db = drizzle(process.env.DATABASE_URL); }
@@ -83,9 +96,16 @@ export async function getSiteContent() {
 }
 
 export async function saveSiteContent(content: SiteContent) {
+  if (!process.env.DATABASE_URL && !ENV.supabaseServiceRoleKey) {
+    throw getMissingWritableBackendError() ?? new Error("Database is not available");
+  }
+
   if (await sbSaveSiteContent(content)) return;
   const db = await getDb();
-  if (!db) throw new Error("Database is not available");
+  if (!db) {
+    const configError = getMissingWritableBackendError();
+    throw configError ?? new Error("Database is not available");
+  }
   await db.insert(siteSettings).values({ key: "site_content", value: JSON.stringify(content) }).onDuplicateKeyUpdate({ set: { value: JSON.stringify(content) } });
 }
 
@@ -93,10 +113,17 @@ export async function saveService(input: {
   id?: number; slug: string; name: string; category: string; description: string;
   icon: string; priceFrom?: number | null; priceMode: "fixed" | "from" | "quote"; active: boolean;
 }) {
+  if (!process.env.DATABASE_URL && !ENV.supabaseServiceRoleKey) {
+    throw getMissingWritableBackendError() ?? new Error("Database is not available");
+  }
+
   const supabaseId = await sbSaveService(input);
   if (supabaseId !== null) return supabaseId;
   const db = await getDb();
-  if (!db) throw new Error("Database is not available");
+  if (!db) {
+    const configError = getMissingWritableBackendError();
+    throw configError ?? new Error("Database is not available");
+  }
   const values = { slug: input.slug, name: input.name, category: input.category, description: input.description, icon: input.icon, priceFrom: input.priceFrom == null ? null : String(input.priceFrom), priceMode: input.priceMode, active: input.active ? 1 : 0 };
   if (input.id) {
     await db.update(services).set(values).where(eq(services.id, input.id));
@@ -119,10 +146,17 @@ export async function listSlots(fromDate?: string, toDate?: string) {
 }
 
 export async function saveSlot(input: { id?: number; date: string; time: string; status: "available" | "blocked" | "booked"; note?: string }) {
+  if (!process.env.DATABASE_URL && !ENV.supabaseServiceRoleKey) {
+    throw getMissingWritableBackendError() ?? new Error("Database is not available");
+  }
+
   const supabaseId = await sbSaveSlot(input);
   if (supabaseId !== null) return supabaseId;
   const db = await getDb();
-  if (!db) throw new Error("Database is not available");
+  if (!db) {
+    const configError = getMissingWritableBackendError();
+    throw configError ?? new Error("Database is not available");
+  }
   const values = { date: input.date, time: input.time, status: input.status, note: input.note || null };
   if (input.id) { await db.update(availabilitySlots).set(values).where(eq(availabilitySlots.id, input.id)); return input.id; }
   const result = await db.insert(availabilitySlots).values(values);
@@ -130,10 +164,17 @@ export async function saveSlot(input: { id?: number; date: string; time: string;
 }
 
 export async function removeSlot(id: number) {
+  if (!process.env.DATABASE_URL && !ENV.supabaseServiceRoleKey) {
+    throw getMissingWritableBackendError() ?? new Error("Database is not available");
+  }
+
   const removedInSupabase = await sbRemoveSlot(id);
   if (removedInSupabase) return;
   const db = await getDb();
-  if (!db) throw new Error("Database is not available");
+  if (!db) {
+    const configError = getMissingWritableBackendError();
+    throw configError ?? new Error("Database is not available");
+  }
   await db.update(availabilitySlots).set({ status: "blocked" }).where(eq(availabilitySlots.id, id));
 }
 
@@ -171,10 +212,17 @@ export async function listBookings() {
 }
 
 export async function setBookingStatus(id: number, status: "pending" | "confirmed" | "cancelled") {
+  if (!process.env.DATABASE_URL && !ENV.supabaseServiceRoleKey) {
+    throw getMissingWritableBackendError() ?? new Error("Database is not available");
+  }
+
   const updatedInSupabase = await sbSetBookingStatus(id, status);
   if (updatedInSupabase) return;
   const db = await getDb();
-  if (!db) throw new Error("Database is not available");
+  if (!db) {
+    const configError = getMissingWritableBackendError();
+    throw configError ?? new Error("Database is not available");
+  }
   const current = await db.select({ slotId: bookings.slotId }).from(bookings).where(eq(bookings.id, id)).limit(1);
   await db.update(bookings).set({ status }).where(eq(bookings.id, id));
   if (current[0]) {

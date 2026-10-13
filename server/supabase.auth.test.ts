@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_SITE_CONTENT } from "../shared/siteContent";
+import { saveSiteContent } from "./db";
 
 const { createClientMock, getUserMock } = vi.hoisted(() => {
   const getUserMock = vi.fn();
@@ -49,5 +51,12 @@ describe("Supabase user verification", () => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
     expect(getUserMock).toHaveBeenCalledWith("access-token");
+  });
+
+  it("throws a clear configuration error when no writable backend is available", async () => {
+    delete process.env.DATABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    await expect(saveSiteContent(DEFAULT_SITE_CONTENT)).rejects.toThrow(/SUPABASE_SERVICE_ROLE_KEY|DATABASE_URL/i);
   });
 });
