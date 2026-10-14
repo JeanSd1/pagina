@@ -107,8 +107,8 @@ describe("Supabase user verification", () => {
     expect(drizzleMock).not.toHaveBeenCalled();
   });
 
-  it("keeps a persisted admin role valid even when the configured admin email is stale", () => {
-    expect(getSupabaseAdminMatch("admin@example.com", "other@example.com", true)).toBe(true);
-    expect(getSupabaseAdminMatch("admin@example.com", "other@example.com", false)).toBe(false);
+  it("authorizes only the configured admin email, ignoring case and whitespace", () => {
+    expect(getSupabaseAdminMatch(" Admin@Example.com ", "admin@example.com")).toBe(true);
+    expect(getSupabaseAdminMatch("user@example.com", "admin@example.com")).toBe(false);
   });
 });

@@ -3,19 +3,16 @@ import type { User } from "../../drizzle/schema";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
 import { getSupabaseUser } from "../supabase";
-import { getUserByEmail } from "../db";
 
 export function getSupabaseAdminMatch(
   supabaseEmail: string | null | undefined,
   configuredAdminEmail: string | undefined,
-  storedAdminRole = false,
 ) {
   const normalizedSupabaseEmail = supabaseEmail?.trim().toLowerCase();
   const normalizedConfiguredAdminEmail = configuredAdminEmail?.trim().toLowerCase();
 
   if (!normalizedSupabaseEmail) return false;
-  if (normalizedConfiguredAdminEmail && normalizedSupabaseEmail === normalizedConfiguredAdminEmail) return true;
-  return storedAdminRole;
+  return Boolean(normalizedConfiguredAdminEmail && normalizedSupabaseEmail === normalizedConfiguredAdminEmail);
 }
 
 export type TrpcContext = {
@@ -34,23 +31,13 @@ export async function createContext(
     const supabaseUser = await getSupabaseUser(authorization.slice("Bearer ".length));
     const userEmail = supabaseUser?.email?.trim().toLowerCase();
     const configuredAdminEmail = ENV.supabaseAdminEmail.trim().toLowerCase();
-    const emailMatchesConfiguredAdmin = Boolean(userEmail && configuredAdminEmail && userEmail === configuredAdminEmail);
-    let storedAdminUser;
-    if (userEmail && !emailMatchesConfiguredAdmin) {
-      try {
-        storedAdminUser = await getUserByEmail(userEmail);
-      } catch {
-        console.warn("[Auth] Could not check the optional persisted admin role");
-      }
-    }
-    const isAdmin = getSupabaseAdminMatch(userEmail, configuredAdminEmail, storedAdminUser?.role === "admin");
+    const isAdmin = getSupabaseAdminMatch(userEmail, configuredAdminEmail);
     if (!isAdmin) {
       console.warn("[Auth] Supabase admin check failed", {
         supabaseUserFound: Boolean(supabaseUser),
         hasUserEmail: Boolean(userEmail),
         hasAdminConfig: Boolean(configuredAdminEmail),
-        hasStoredAdminRole: storedAdminUser?.role === "admin",
-        emailMatches: isAdmin,
+        emailMatchesConfiguredAdmin: Boolean(userEmail && configuredAdminEmail && userEmail === configuredAdminEmail),
       });
     }
     if (supabaseUser) {
