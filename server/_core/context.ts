@@ -3,6 +3,20 @@ import type { User } from "../../drizzle/schema";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
 import { getSupabaseUser } from "../supabase";
+import { getUserByEmail } from "../db";
+
+export function getSupabaseAdminMatch(
+  supabaseEmail: string | null | undefined,
+  configuredAdminEmail: string | undefined,
+  storedAdminRole = false,
+) {
+  const normalizedSupabaseEmail = supabaseEmail?.trim().toLowerCase();
+  const normalizedConfiguredAdminEmail = configuredAdminEmail?.trim().toLowerCase();
+
+  if (!normalizedSupabaseEmail) return false;
+  if (normalizedConfiguredAdminEmail && normalizedSupabaseEmail === normalizedConfiguredAdminEmail) return true;
+  return storedAdminRole;
+}
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
@@ -18,14 +32,16 @@ export async function createContext(
   const authorization = opts.req.headers.authorization;
   if (authorization?.startsWith("Bearer ")) {
     const supabaseUser = await getSupabaseUser(authorization.slice("Bearer ".length));
-    const adminEmail = ENV.supabaseAdminEmail.trim().toLowerCase();
     const userEmail = supabaseUser?.email?.trim().toLowerCase();
-    const isAdmin = Boolean(userEmail && adminEmail && userEmail === adminEmail);
+    const configuredAdminEmail = ENV.supabaseAdminEmail.trim().toLowerCase();
+    const storedAdminUser = userEmail ? await getUserByEmail(userEmail) : undefined;
+    const isAdmin = getSupabaseAdminMatch(userEmail, configuredAdminEmail, storedAdminUser?.role === "admin");
     if (!isAdmin) {
       console.warn("[Auth] Supabase admin check failed", {
         supabaseUserFound: Boolean(supabaseUser),
         hasUserEmail: Boolean(userEmail),
-        hasAdminConfig: Boolean(adminEmail),
+        hasAdminConfig: Boolean(configuredAdminEmail),
+        hasStoredAdminRole: storedAdminUser?.role === "admin",
         emailMatches: isAdmin,
       });
     }

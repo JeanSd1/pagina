@@ -4,7 +4,7 @@ import { DEFAULT_SERVICES } from "@shared/const";
 import { availabilitySlots, bookings, InsertUser, quotes, services, siteSettings, users } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { DEFAULT_SITE_CONTENT, normalizeSiteContent, type SiteContent } from "../shared/siteContent";
-import { sbCreateBooking, sbCreateQuote, sbGetSiteContent, sbListBookings, sbListServices, sbListSlots, sbRemoveSlot, sbSaveService, sbSaveSiteContent, sbSaveSlot, sbSetBookingStatus } from "./supabase";
+import { isSupabaseConfigured, sbCreateBooking, sbCreateQuote, sbGetSiteContent, sbListBookings, sbListServices, sbListSlots, sbRemoveSlot, sbSaveService, sbSaveSiteContent, sbSaveSlot, sbSetBookingStatus } from "./supabase";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -54,6 +54,13 @@ export async function getUserByOpenId(openId: string) {
   return result[0];
 }
 
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result[0];
+}
+
 export async function listServices(includeInactive = false) {
   const supabaseRows = await sbListServices(includeInactive);
   if (supabaseRows !== null) {
@@ -85,8 +92,10 @@ export async function listServices(includeInactive = false) {
 }
 
 export async function getSiteContent() {
-  const supabaseContent = await sbGetSiteContent();
-  if (supabaseContent !== null) return normalizeSiteContent(supabaseContent);
+  if (isSupabaseConfigured()) {
+    const supabaseContent = await sbGetSiteContent();
+    return supabaseContent ? normalizeSiteContent(supabaseContent) : DEFAULT_SITE_CONTENT;
+  }
   const db = await getDb();
   if (!db) return DEFAULT_SITE_CONTENT;
   const rows = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, "site_content")).limit(1);
