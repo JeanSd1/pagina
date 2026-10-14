@@ -34,7 +34,15 @@ export async function createContext(
     const supabaseUser = await getSupabaseUser(authorization.slice("Bearer ".length));
     const userEmail = supabaseUser?.email?.trim().toLowerCase();
     const configuredAdminEmail = ENV.supabaseAdminEmail.trim().toLowerCase();
-    const storedAdminUser = userEmail ? await getUserByEmail(userEmail) : undefined;
+    const emailMatchesConfiguredAdmin = Boolean(userEmail && configuredAdminEmail && userEmail === configuredAdminEmail);
+    let storedAdminUser;
+    if (userEmail && !emailMatchesConfiguredAdmin) {
+      try {
+        storedAdminUser = await getUserByEmail(userEmail);
+      } catch {
+        console.warn("[Auth] Could not check the optional persisted admin role");
+      }
+    }
     const isAdmin = getSupabaseAdminMatch(userEmail, configuredAdminEmail, storedAdminUser?.role === "admin");
     if (!isAdmin) {
       console.warn("[Auth] Supabase admin check failed", {

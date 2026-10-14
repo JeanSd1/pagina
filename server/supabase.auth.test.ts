@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_SITE_CONTENT } from "../shared/siteContent";
 import { getSiteContent, saveSiteContent } from "./db";
-import { getSupabaseAdminMatch } from "./_core/context";
+import { createContext, getSupabaseAdminMatch } from "./_core/context";
 
 const { createClientMock, drizzleMock, fromMock, getUserMock } = vi.hoisted(() => {
   const getUserMock = vi.fn();
@@ -23,6 +23,7 @@ const environmentKeys = [
   "SUPABASE_URL",
   "SUPABASE_ANON_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
+  "SUPABASE_ADMIN_EMAIL",
   "DATABASE_URL",
 ] as const;
 const originalEnvironment = Object.fromEntries(
@@ -57,6 +58,30 @@ describe("Supabase user verification", () => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
     expect(getUserMock).toHaveBeenCalledWith("access-token");
+  });
+
+  it("authorizes the configured admin without querying the MySQL users table", async () => {
+    process.env.SUPABASE_ADMIN_EMAIL = "admin@example.com";
+    process.env.DATABASE_URL = "mysql://example/database";
+    getUserMock.mockResolvedValue({
+      data: { user: { id: "user-id", email: "admin@example.com" } },
+      error: null,
+    });
+    drizzleMock.mockReturnValue({
+      select: () => ({
+        from: () => ({
+          where: () => ({ limit: vi.fn().mockRejectedValue(new Error("users query failed")) }),
+        }),
+      }),
+    });
+
+    const context = await createContext({
+      req: { headers: { authorization: "Bearer access-token" } },
+      res: {},
+    } as never);
+
+    expect(context.user?.role).toBe("admin");
+    expect(drizzleMock).not.toHaveBeenCalled();
   });
 
   it("throws a clear configuration error when no writable backend is available", async () => {
