@@ -39,6 +39,16 @@ export default function Home() {
   const heroImageUrl = content.heroImageUrl?.trim();
   const brandLogoUrl = content.logoUrl?.trim();
   const panelImageUrl = content.panelImageUrl?.trim();
+  const hasHeroCopy = [
+    content.heroStatus,
+    content.heroTitle,
+    content.heroAccent,
+    content.heroDescription,
+    content.heroPrimaryAction,
+    content.heroSecondaryAction,
+    content.heroProofTitle,
+    content.heroProofDetail,
+  ].some(value => value.trim());
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -66,6 +76,10 @@ export default function Home() {
   }, [contentQuery, servicesQuery]);
 
   const closeMenu = () => setMenuOpen(false);
+
+  if (contentQuery.isPending || servicesQuery.isPending) {
+    return <main className="site-loading" role="status">Carregando conteúdo…</main>;
+  }
 
   return (
     <div className="site-shell">
@@ -130,50 +144,41 @@ export default function Home() {
       </header>
       <main id="top">
         <section className="hero-section">
-          <div className="hero-grid container">
-            <div className="hero-copy">
-              <div className="hero-kicker">
+          <div className={`hero-grid container ${heroImageUrl && !hasHeroCopy ? "hero-grid-image-only" : ""}`}>
+            {hasHeroCopy && <div className="hero-copy">
+              {content.heroStatus.trim() && <div className="hero-kicker">
                 <span className="status-dot">●</span> {content.heroStatus}{" "}
                 <span className="hero-kicker-line" />
-              </div>
-              <h1>
+              </div>}
+              {(content.heroTitle.trim() || content.heroAccent.trim()) && <h1>
                 {content.heroTitle}
-                <br />
-                <em>{content.heroAccent}</em>
-              </h1>
-              <p className="hero-lede">{content.heroDescription}</p>
-              <div className="hero-actions">
-                <a className="button-primary" href="#orcamento">
+                {content.heroTitle.trim() && content.heroAccent.trim() && <br />}
+                {content.heroAccent.trim() && <em>{content.heroAccent}</em>}
+              </h1>}
+              {content.heroDescription.trim() && <p className="hero-lede">{content.heroDescription}</p>}
+              {(content.heroPrimaryAction.trim() || content.heroSecondaryAction.trim()) && <div className="hero-actions">
+                {content.heroPrimaryAction.trim() && <a className="button-primary" href="#orcamento">
                   {content.heroPrimaryAction} <ArrowRight size={17} />
-                </a>
-                <a className="button-text" href="#servicos">
+                </a>}
+                {content.heroSecondaryAction.trim() && <a className="button-text" href="#servicos">
                   {content.heroSecondaryAction} <ArrowDownRight size={17} />
-                </a>
-              </div>
-              <div className="hero-proof">
+                </a>}
+              </div>}
+              {(content.heroProofTitle.trim() || content.heroProofDetail.trim()) && <div className="hero-proof">
                 <div className="avatar-stack">
                   <span>{content.brandMark.replace("/", "")}</span>
                   <span>+</span>
                 </div>
                 <p>
-                  <strong>{content.heroProofTitle}</strong>
-                  <br />
-                  <span>{content.heroProofDetail}</span>
+                  {content.heroProofTitle.trim() && <strong>{content.heroProofTitle}</strong>}
+                  {content.heroProofTitle.trim() && content.heroProofDetail.trim() && <br />}
+                  {content.heroProofDetail.trim() && <span>{content.heroProofDetail}</span>}
                 </p>
-              </div>
-            </div>
-            <div
-              className="hero-panel"
-              style={
-                heroImageUrl
-                  ? {
-                      backgroundImage: `linear-gradient(rgba(11,18,32,0.75), rgba(11,18,32,0.8)), url(${heroImageUrl})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                    }
-                  : undefined
-              }
-            >
+              </div>}
+            </div>}
+            <div className={`hero-panel ${heroImageUrl ? "hero-panel-with-image" : ""}`}>
+              {heroImageUrl ? <img className="hero-panel-upload" src={heroImageUrl} alt={`${content.brandName} capa`} /> : <>
+              <div className="panel-noise" />
               <div className="panel-noise" />
               <div className="panel-head">
                 <span className="eyebrow text-blue-200">
@@ -219,6 +224,7 @@ export default function Home() {
                 <span>{content.regionLabel}</span>
                 <strong>{content.regionValue}</strong>
               </div>
+              </>}
             </div>
           </div>
         </section>

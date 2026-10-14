@@ -197,7 +197,7 @@ export default function SiteContentEditor({
                       </select>
                     ) : field.multiline ? (
                       <textarea
-                        required
+                        required={field.section !== "Apresentação" && field.section !== "Cartão de destaque"}
                         value={form[field.key]}
                         onChange={event =>
                           updateField(field.key, event.target.value)
@@ -205,7 +205,7 @@ export default function SiteContentEditor({
                       />
                     ) : (
                       <input
-                        required
+                        required={field.section !== "Apresentação" && field.section !== "Cartão de destaque"}
                         value={form[field.key]}
                         onChange={event =>
                           updateField(field.key, event.target.value)
