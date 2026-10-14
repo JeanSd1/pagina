@@ -3,21 +3,53 @@ import { DEFAULT_SITE_CONTENT } from "../shared/siteContent";
 import { getSiteContent, saveSiteContent } from "./db";
 import { createContext, getSupabaseAdminMatch } from "./_core/context";
 
-const { createClientMock, drizzleMock, fromMock, getUserMock } = vi.hoisted(() => {
+const {
+  createBucketMock,
+  createClientMock,
+  drizzleMock,
+  fromMock,
+  getBucketMock,
+  getPublicUrlMock,
+  getUserMock,
+  storageFromMock,
+  updateBucketMock,
+  uploadStorageMock,
+} = vi.hoisted(() => {
   const getUserMock = vi.fn();
   const fromMock = vi.fn();
+  const getBucketMock = vi.fn();
+  const createBucketMock = vi.fn();
+  const updateBucketMock = vi.fn();
+  const storageFromMock = vi.fn();
+  const uploadStorageMock = vi.fn();
+  const getPublicUrlMock = vi.fn();
   return {
     getUserMock,
     fromMock,
+    getBucketMock,
+    createBucketMock,
+    updateBucketMock,
+    storageFromMock,
+    uploadStorageMock,
+    getPublicUrlMock,
     drizzleMock: vi.fn(),
-    createClientMock: vi.fn(() => ({ auth: { getUser: getUserMock }, from: fromMock })),
+    createClientMock: vi.fn(() => ({
+      auth: { getUser: getUserMock },
+      from: fromMock,
+      storage: {
+        getBucket: getBucketMock,
+        createBucket: createBucketMock,
+        updateBucket: updateBucketMock,
+        from: storageFromMock,
+      },
+    })),
   };
 });
 
 vi.mock("@supabase/supabase-js", () => ({ createClient: createClientMock }));
 vi.mock("drizzle-orm/mysql2", () => ({ drizzle: drizzleMock }));
 
-import { getSupabaseUser } from "./supabase";
+import { getSupabaseUser, sbUploadSiteImage } from "./supabase";
 
 const environmentKeys = [
   "SUPABASE_URL",
@@ -105,6 +137,26 @@ describe("Supabase user verification", () => {
     await expect(getSiteContent()).resolves.toEqual(DEFAULT_SITE_CONTENT);
     expect(fromMock).toHaveBeenCalledWith("site_settings");
     expect(drizzleMock).not.toHaveBeenCalled();
+  });
+
+  it("creates the public image bucket when missing and uploads through the admin client", async () => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
+    getBucketMock.mockResolvedValue({ data: null, error: { message: "Bucket not found" } });
+    createBucketMock.mockResolvedValue({ data: { name: "site-assets" }, error: null });
+    storageFromMock.mockReturnValue({
+      upload: uploadStorageMock.mockResolvedValue({ data: { path: "site/logoUrl/logo.png" }, error: null }),
+      getPublicUrl: getPublicUrlMock.mockReturnValue({ data: { publicUrl: "https://example.supabase.co/site-assets/logo.png" } }),
+    });
+
+    await expect(sbUploadSiteImage({
+      field: "logoUrl",
+      fileName: "logo.png",
+      contentType: "image/png",
+      base64: "aGVsbG8=",
+    })).resolves.toBe("https://example.supabase.co/site-assets/logo.png");
+
+    expect(createBucketMock).toHaveBeenCalledWith("site-assets", expect.objectContaining({ public: true }));
+    expect(uploadStorageMock).toHaveBeenCalledWith(expect.stringMatching(/^site\/logoUrl\//), expect.any(Buffer), expect.objectContaining({ contentType: "image/png" }));
   });
 
   it("authorizes only the configured admin email, ignoring case and whitespace", () => {

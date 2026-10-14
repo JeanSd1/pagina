@@ -6,6 +6,8 @@ type ServiceInput = { id?: number; slug: string; name: string; category: string;
 type SlotInput = { id?: number; date: string; time: string; status: "available" | "blocked" | "booked"; note?: string };
 let adminClient: SupabaseClient | null = null;
 let authClient: SupabaseClient | null = null;
+const siteAssetBucket = "site-assets";
+const siteImageMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export function isSupabaseConfigured() { return Boolean(ENV.supabaseUrl && ENV.supabaseServiceRoleKey); }
 export function getSupabaseAdmin() {
@@ -21,6 +23,49 @@ export async function getSupabaseUser(accessToken: string): Promise<SupabaseUser
   const { data, error } = await authClient.auth.getUser(accessToken);
   if (error) return null;
   return data.user;
+}
+
+export async function sbUploadSiteImage(input: {
+  field: "logoUrl" | "heroImageUrl" | "panelImageUrl";
+  fileName: string;
+  contentType: string;
+  base64: string;
+}) {
+  const client = getSupabaseAdmin();
+  if (!client) throw new Error("O Supabase Storage não está configurado no servidor.");
+
+  const { data: bucket, error: bucketError } = await client.storage.getBucket(siteAssetBucket);
+  if (bucketError) {
+    const { error: createError } = await client.storage.createBucket(siteAssetBucket, {
+      public: true,
+      fileSizeLimit: 5 * 1024 * 1024,
+      allowedMimeTypes: siteImageMimeTypes,
+    });
+    if (createError && !createError.message.toLowerCase().includes("already exists")) throw createError;
+  } else if (!bucket.public) {
+    const { error } = await client.storage.updateBucket(siteAssetBucket, {
+      public: true,
+      fileSizeLimit: 5 * 1024 * 1024,
+      allowedMimeTypes: siteImageMimeTypes,
+    });
+    if (error) throw error;
+  }
+
+  const file = Buffer.from(input.base64, "base64");
+  if (!file.length || file.length > 5 * 1024 * 1024 || file.toString("base64") !== input.base64) {
+    throw new Error("A imagem está vazia, excede 5 MB ou possui codificação inválida.");
+  }
+  if (!siteImageMimeTypes.includes(input.contentType)) throw new Error("Formato de imagem não permitido.");
+
+  const fileName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-160) || "image";
+  const path = `site/${input.field}/${Date.now()}-${crypto.randomUUID()}-${fileName}`;
+  const { data, error } = await client.storage.from(siteAssetBucket).upload(path, file, {
+    contentType: input.contentType,
+    cacheControl: "3600",
+    upsert: false,
+  });
+  if (error) throw error;
+  return client.storage.from(siteAssetBucket).getPublicUrl(data.path).data.publicUrl;
 }
 
 function mapService(row: any) {

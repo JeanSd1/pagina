@@ -418,18 +418,8 @@ export default function Home() {
         </section>
       </main>
       <footer className="site-footer">
-        <div className="container flex flex-col justify-between gap-5 py-7 sm:flex-row sm:items-center">
-          <a className="brand-mark" href="#top">
-            <span>{content.brandMark}</span> <b>{content.brandName}</b>
-          </a>
-          <p>
-            © {new Date().getFullYear()} {content.ownerName}.{" "}
-            {content.footerTagline}
-          </p>
-          <div className="flex items-center gap-4 text-xs font-semibold text-slate-400">
-            <a href={`mailto:${content.contactEmail}`}>
-              {content.contactEmail}
-            </a>
+        <div className="container flex justify-end py-7">
+          <div className="text-xs font-semibold text-slate-400">
             <a
               href="https://github.com/JeanSd1"
               target="_blank"

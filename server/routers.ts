@@ -7,6 +7,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, publicProcedure, router } from "./_core/trpc";
 import { createBooking, createQuote, getSiteContent, listBookings, listServices, listSlots, removeSlot, saveService, saveSiteContent, saveSlot, setBookingStatus } from "./db";
+import { sbUploadSiteImage } from "./supabase";
 import { sendReceipt } from "./receipts";
 
 const serviceInput = z.object({
@@ -66,6 +67,12 @@ export const appRouter = router({
   }),
   admin: router({
     dashboard: adminProcedure.query(async () => ({ services: await listServices(true), slots: await listSlots(), bookings: await listBookings(), siteContent: await getSiteContent() })),
+    uploadSiteImage: adminProcedure.input(z.object({
+      field: z.enum(["logoUrl", "heroImageUrl", "panelImageUrl"]),
+      fileName: z.string().min(1).max(255).regex(/^[a-zA-Z0-9._-]+$/),
+      contentType: z.enum(["image/jpeg", "image/png", "image/webp", "image/gif"]),
+      base64: z.string().min(1).max(7_000_000).regex(/^[A-Za-z0-9+/]+={0,2}$/),
+    })).mutation(({ input }) => sbUploadSiteImage(input)),
     saveSiteContent: adminProcedure.input(siteContentInput).mutation(({ input }) => saveSiteContent(input)),
     saveService: adminProcedure.input(serviceInput).mutation(({ input }) => saveService(input)),
     saveSlot: adminProcedure.input(z.object({ id: z.number().optional(), date: z.string().length(10), time: z.string().length(5), status: z.enum(["available", "blocked", "booked"]), note: z.string().max(255).optional() })).mutation(({ input }) => saveSlot(input)),

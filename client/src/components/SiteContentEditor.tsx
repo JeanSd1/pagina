@@ -6,13 +6,33 @@ import {
   type SiteContent,
 } from "@shared/siteContent";
 import { trpc } from "@/lib/trpc";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
-const IMAGE_FIELD_KEYS = new Set<keyof SiteContent>([
+type ImageField = "logoUrl" | "heroImageUrl" | "panelImageUrl";
+type ImageMimeType = "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+const IMAGE_FIELD_KEYS = new Set<ImageField>([
   "logoUrl",
   "heroImageUrl",
   "panelImageUrl",
 ]);
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const IMAGE_MIME_TYPES: ImageMimeType[] = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+function isImageField(field: keyof SiteContent): field is ImageField {
+  return IMAGE_FIELD_KEYS.has(field as ImageField);
+}
+
+function isImageMimeType(mimeType: string): mimeType is ImageMimeType {
+  return IMAGE_MIME_TYPES.includes(mimeType as ImageMimeType);
+}
+
+async function encodeFileBase64(file: File) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+  }
+  return btoa(binary);
+}
 
 export default function SiteContentEditor({
   content,
@@ -26,6 +46,7 @@ export default function SiteContentEditor({
   const [uploadingField, setUploadingField] = useState<keyof SiteContent | null>(null);
   const [uploadError, setUploadError] = useState("");
   const utils = trpc.useUtils();
+  const uploadImage = trpc.admin.uploadSiteImage.useMutation();
   const saveContent = trpc.admin.saveSiteContent.useMutation({
     onSuccess: async () => {
       await utils.siteContent.get.invalidate();
@@ -46,12 +67,16 @@ export default function SiteContentEditor({
   };
 
   const uploadFieldImage = async (
-    key: keyof SiteContent,
+    key: ImageField,
     file?: File | null,
   ) => {
     if (!file) return;
-    if (!isSupabaseConfigured) {
-      setUploadError("Configure o Supabase para habilitar uploads de imagem.");
+    if (file.size > MAX_IMAGE_SIZE) {
+      setUploadError("A imagem deve ter no máximo 5 MB.");
+      return;
+    }
+    if (!isImageMimeType(file.type)) {
+      setUploadError("Formato não permitido. Use JPG, PNG, WebP ou GIF.");
       return;
     }
 
@@ -63,20 +88,16 @@ export default function SiteContentEditor({
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-zA-Z0-9._-]+/g, "-")
         .toLowerCase();
-      const storagePath = `site/${String(key)}/${Date.now()}-${safeName}`;
-      const { data, error } = await supabase.storage
-        .from("site-assets")
-        .upload(storagePath, file, { cacheControl: "3600", upsert: true });
-
-      if (error) throw error;
-      const publicUrl = supabase.storage
-        .from("site-assets")
-        .getPublicUrl(data.path).data.publicUrl;
-
+      const publicUrl = await uploadImage.mutateAsync({
+        field: key,
+        fileName: safeName,
+        contentType: file.type,
+        base64: await encodeFileBase64(file),
+      });
       updateField(key, publicUrl);
     } catch (error) {
       console.error("[SiteContentEditor] Upload failed:", error);
-      setUploadError("Não foi possível enviar a imagem. Verifique se o bucket do Supabase foi criado e está acessível.");
+      setUploadError(error instanceof Error ? error.message : "Não foi possível enviar a imagem.");
     } finally {
       setUploadingField(null);
     }
@@ -117,7 +138,7 @@ export default function SiteContentEditor({
               {SITE_CONTENT_FIELDS.filter(
                 field => field.section === section
               ).map(field => {
-                const isImageField = IMAGE_FIELD_KEYS.has(field.key);
+                const imageKey = isImageField(field.key) ? field.key : undefined;
 
                 return (
                   <label
@@ -125,7 +146,7 @@ export default function SiteContentEditor({
                     key={field.key}
                   >
                     {field.label}
-                    {isImageField ? (
+                    {imageKey ? (
                       <div className="grid gap-2">
                         <input
                           type="url"
@@ -143,7 +164,7 @@ export default function SiteContentEditor({
                               className="hidden"
                               onChange={async event => {
                                 await uploadFieldImage(
-                                  field.key,
+                                  imageKey,
                                   event.target.files?.[0],
                                 );
                                 event.target.value = "";
