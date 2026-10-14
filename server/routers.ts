@@ -18,15 +18,18 @@ const optionalImageKeys = new Set<keyof SiteContent>([
   "heroImageUrl",
   "panelImageUrl",
 ]);
+const optionalPresentationKeys = new Set(
+  SITE_CONTENT_FIELDS.filter(field => field.section === "Apresentação").map(field => field.key)
+);
 const siteContentInput = z.custom<SiteContent>(
   (input): input is SiteContent =>
     typeof input === "object" &&
     input !== null &&
     SITE_CONTENT_FIELDS.every(({ key }) => {
-      const value = Reflect.get(input, key);
-      if (typeof value !== "string") return false;
-      if (key === "siteTheme" && value !== "light" && value !== "dark") return false;
-      if (optionalImageKeys.has(key)) return value.length <= 5000;
+      const rawValue = Reflect.get(input, key);
+      const value = rawValue == null ? "" : String(rawValue);
+      if (key === "siteTheme" && value !== "" && value !== "light" && value !== "dark") return false;
+      if (optionalImageKeys.has(key) || optionalPresentationKeys.has(key)) return value.length <= 5000;
       return value.trim().length > 0 && value.length <= 5000;
     }),
   { message: "O conteúdo do site contém campos vazios ou inválidos." },
